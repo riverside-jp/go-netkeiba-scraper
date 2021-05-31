@@ -1,0 +1,5 @@
+netkeiba {
+    db_url = "https://db.netkeiba.com"
+    email = ""
+    password = ""
+}

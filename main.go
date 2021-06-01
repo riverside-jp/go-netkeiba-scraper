@@ -21,6 +21,7 @@ type Config struct {
 
 type NetkeibaConfig struct {
     DatabaseURL string `hcl:"db_url"`
+    LoginURL    string `hcl:"login_url"`
     Email       string `hcl:"email"`
     Password    string `hcl:"password"`
 }
@@ -49,6 +50,11 @@ func main() {
                     },
                 },
                 Action: cmdCollect,
+            },
+            {
+                Name: "dump",
+                Usage: "Dump past races data from netkeiba.com",
+                Action: cmdDump,
             },
         },
     }

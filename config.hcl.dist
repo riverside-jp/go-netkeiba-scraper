@@ -1,5 +1,6 @@
 netkeiba {
     db_url = "https://db.netkeiba.com"
+    login_url = "https://regist.netkeiba.com/account/?pid=login"
     email = ""
     password = ""
 }

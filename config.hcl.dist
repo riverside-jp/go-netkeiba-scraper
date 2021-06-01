@@ -3,3 +3,7 @@ netkeiba {
     email = ""
     password = ""
 }
+
+path {
+    data_dir = "./data"
+}

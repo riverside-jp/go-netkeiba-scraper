@@ -10,6 +10,7 @@ import (
 
 const (
     filenameRaceList = "race_list.txt"
+    filenameDatabase = "race.db"
 )
 
 var config Config
@@ -55,6 +56,18 @@ func main() {
                 Name: "dump",
                 Usage: "Dump past races data from netkeiba.com",
                 Action: cmdDump,
+            },
+            {
+                Name: "import",
+                Usage: "Import data into database",
+                Flags: []cli.Flag{
+                    &cli.BoolFlag{
+                        Name: "force",
+                        Aliases: []string{"f"},
+                        Usage: "Truncate the database if it already exists, and import the data",
+                    },
+                },
+                Action: cmdImport,
             },
         },
     }

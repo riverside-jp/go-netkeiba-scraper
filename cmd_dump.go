@@ -136,5 +136,5 @@ func determineDumpHTMLFilenameFromURL(url string) string {
 	// url looks like "https://db.netkeiba.com/race/202105020305/"
 	s := strings.Split(strings.TrimRight(url, "/"), "/")
 
-	return s[len(s) - 1] + ".html"
+	return s[len(s)-1] + ".html"
 }

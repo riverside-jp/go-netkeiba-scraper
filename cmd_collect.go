@@ -92,7 +92,7 @@ func findRacePagesOfOneDay(baseURL string, path string) ([]string, error) {
 	c := colly.NewCollector()
 
 	c.OnHTML("dl.race_top_data_info dd > a", func(e *colly.HTMLElement) {
-		races = append(races, baseURL + e.Attr("href"))
+		races = append(races, baseURL+e.Attr("href"))
 	})
 
 	c.OnRequest(func(request *colly.Request) {

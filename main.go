@@ -69,6 +69,11 @@ func main() {
 				},
 				Action: cmdImport,
 			},
+			{
+				Name:   "sync",
+				Usage:  "Sync local data with netkeiba.com",
+				Action: cmdSync,
+			},
 		},
 	}
 

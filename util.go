@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"regexp"
 	"strconv"
 	"strings"
@@ -64,4 +65,13 @@ func (u Util) parseFloat(s string) float64 {
 	f, _ := strconv.ParseFloat(strings.ReplaceAll(s, ",", ""), 64)
 
 	return f
+}
+
+func (u Util) openDatabase(dbFilePath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", dbFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

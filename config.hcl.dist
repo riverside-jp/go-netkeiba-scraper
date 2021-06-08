@@ -1,10 +1,10 @@
 netkeiba {
-    db_url = "https://db.netkeiba.com"
+    db_url    = "https://db.netkeiba.com"
     login_url = "https://regist.netkeiba.com/account/?pid=login"
-    email = ""
-    password = ""
+    email     = ""
+    password  = ""
 }
 
 path {
-    data_dir = "./data"
+    data_dir  = "./data"
 }

@@ -2,17 +2,18 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 	"log"
 	"path/filepath"
 	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/xerrors"
 )
 
 func cmdSync(c *cli.Context) error {
-	db, err := openDatabase(filepath.Join(config.Path.DataDir, filenameDatabase))
+	db, err := util.openDatabase(filepath.Join(config.Path.DataDir, filenameDatabase))
 	if err != nil {
 		return xerrors.Errorf("Failed to open database: %+w", err)
 	}
@@ -20,7 +21,7 @@ func cmdSync(c *cli.Context) error {
 
 	var dateRaw string
 
-	if err := db.QueryRow("SELECT date FROM race_info ORDER BY date DESC LIMIT 1;").Scan(&dateRaw); err != nil && !xerrors.Is(err, sql.ErrNoRows) {
+	if err := db.QueryRow("SELECT date FROM race ORDER BY date DESC LIMIT 1;").Scan(&dateRaw); err != nil && !xerrors.Is(err, sql.ErrNoRows) {
 		return xerrors.Errorf("Failed to query row: %+w", err)
 	}
 
@@ -84,7 +85,7 @@ L:
 
 		filename := filepath.Join(config.Path.DataDir, determineDumpHTMLFilenameFromURL(racePages[i]))
 
-		if err := importData(db, filename); err != nil {
+		if err := importRaceData(db, filename); err != nil {
 			log.Printf("Failed to import %s: %s\n", filename, err)
 		}
 

@@ -39,6 +39,7 @@ func init() {
 
 func main() {
 	app := &cli.App{
+		Usage: "scraping tool for data extraction from netkeiba.com",
 		Commands: []*cli.Command{
 			{
 				Name:  "collect",

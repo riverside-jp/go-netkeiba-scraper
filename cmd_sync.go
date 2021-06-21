@@ -78,7 +78,7 @@ L:
 	}
 
 	for i := 0; i < len(racePages); i++ {
-		if err := dumpRacePageAsHTMLFile(config.Path.DataDir, racePages[i]); err != nil {
+		if err := dumpWebPageAsHTMLFile(config.Path.DataDir, racePages[i]); err != nil {
 			log.Printf("Failed to dump %s: %+v", racePages[i], err)
 			continue
 		}

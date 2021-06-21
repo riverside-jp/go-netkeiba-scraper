@@ -108,7 +108,7 @@ func loginToNetkeibaCom(loginURL string, id string, password string) error {
 	return nil
 }
 
-func dumpRacePageAsHTMLFile(dumpDir string, url string) error {
+func dumpWebPageAsHTMLFile(dumpDir string, url string) error {
 	log.Println("Sending request to " + url)
 
 	resp, err := http.DefaultClient.Get(url)

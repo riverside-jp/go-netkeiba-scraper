@@ -65,3 +65,15 @@ CREATE TABLE IF NOT EXISTS `payout` (
     PRIMARY KEY (race_id, ticket_type, draw),
     FOREIGN KEY (race_id) REFERENCES race(id)
 );
+
+CREATE TABLE IF NOT EXISTS `horse` (
+    id      TEXT    NOT NULL,
+    name    TEXT    NOT NULL,
+    born    INTEGER NOT NULL,
+    sire_id TEXT,
+    dam_id  TEXT,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS sire_id_idx ON horse (sire_id);
+CREATE INDEX IF NOT EXISTS dam_id_idx ON horse (dam_id);

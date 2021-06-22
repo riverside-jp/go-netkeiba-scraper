@@ -43,7 +43,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "collect",
-				Usage: "Collect URL of past races from netkeiba.com",
+				Usage: "Collect URL from netkeiba.com",
 				Flags: []cli.Flag{
 					&cli.IntFlag{
 						Name:    "years",
@@ -56,6 +56,13 @@ func main() {
 			{
 				Name:   "dump",
 				Usage:  "Dump past races data from netkeiba.com",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "data-type",
+						Aliases: []string{"d"},
+						Usage:   "Specify the type of data to be collected (Default: race and result data)",
+					},
+				},
 				Action: cmdDump,
 			},
 			{

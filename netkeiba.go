@@ -185,7 +185,7 @@ func importRaceData(db *sql.DB, filePath string) error {
 		return err
 	}
 
-	s1, err := tx.Prepare(`INSERT OR REPLACE INTO race VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`)
+	s1, err := tx.Prepare(`INSERT OR REPLACE INTO race VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`)
 	if err != nil {
 		return err
 	}
@@ -205,6 +205,7 @@ func importRaceData(db *sql.DB, filePath string) error {
 		race.date,
 		race.postTime,
 		race.classification,
+		race.classificationCode,
 	); err != nil {
 		return err
 	}
@@ -227,7 +228,7 @@ func importRaceData(db *sql.DB, filePath string) error {
 		}
 	}
 
-	s3, err := tx.Prepare(`INSERT OR REPLACE INTO result VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`)
+	s3, err := tx.Prepare(`INSERT OR REPLACE INTO result VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`)
 	if err != nil {
 		return err
 	}
@@ -247,6 +248,7 @@ func importRaceData(db *sql.DB, filePath string) error {
 			results[i].jockeyID,
 			results[i].jockey,
 			results[i].time,
+			results[i].timeSec,
 			results[i].winningMargin,
 			results[i].speedIndex,
 			results[i].position,
@@ -268,19 +270,20 @@ func importRaceData(db *sql.DB, filePath string) error {
 }
 
 type race struct {
-	id             int
-	name           string
-	course         string
-	number         int
-	surface        string
-	direction      string
-	distance       int
-	weather        string
-	surfaceState   string
-	surfaceIndex   sql.NullInt32
-	date           string
-	postTime       string
-	classification string
+	id                 int
+	name               string
+	course             string
+	number             int
+	surface            string
+	direction          string
+	distance           int
+	weather            string
+	surfaceState       string
+	surfaceIndex       sql.NullInt32
+	date               string
+	postTime           string
+	classification     string
+	classificationCode string
 }
 
 type payout struct {
@@ -303,11 +306,12 @@ type result struct {
 	weight        float64
 	jockeyID      string
 	jockey        string
-	time          string
+	time          sql.NullString
+	timeSec       sql.NullFloat64
 	winningMargin string
 	speedIndex    sql.NullInt32
 	position      string
-	sectionalTime float64
+	sectionalTime sql.NullFloat64
 	odds          float64
 	popularity    int
 	horseWeight   string
@@ -371,6 +375,7 @@ func buildRaceRecord(id int, doc *html.Node) (*race, error) {
 		record.course = r.ReplaceAllString(s[1], "$1")
 		record.date = t.Format("2006-01-02")
 		record.classification = s[2]
+		record.classificationCode = determineClassificationCode(record.surface, record.distance, record.classification)
 	} else {
 		return nil, xerrors.New(`Missing p[@class="smalltxt"]`)
 	}
@@ -446,10 +451,8 @@ func buildResultRecords(id int, doc *html.Node) ([]*result, error) {
 			weight:        util.htmlInnerTextAsFloat(td[5]),
 			jockeyID:      util.htmlSelectHrefLastSegment(td[6]),
 			jockey:        util.htmlInnerText(td[6]),
-			time:          util.htmlInnerText(td[7]),
 			winningMargin: util.htmlInnerText(td[8]),
 			position:      util.htmlInnerText(td[10]),
-			sectionalTime: util.htmlInnerTextAsFloat(td[11]),
 			odds:          util.htmlInnerTextAsFloat(td[12]),
 			popularity:    util.htmlInnerTextAsInt(td[13]),
 			horseWeight:   util.htmlInnerText(td[14]),
@@ -460,10 +463,196 @@ func buildResultRecords(id int, doc *html.Node) ([]*result, error) {
 			earnings:      util.htmlInnerTextAsFloat(td[20]),
 		}
 
+		if util.htmlInnerText(td[7]) != "" {
+			record.time.Scan(util.htmlInnerText(td[7]))
+			record.timeSec.Scan(util.parseFinishTime(util.htmlInnerText(td[7])))
+		}
+		if util.htmlInnerText(td[11]) != "" {
+			record.sectionalTime.Scan(util.htmlInnerTextAsFloat(td[11]))
+		}
 		record.speedIndex.Scan(util.htmlInnerTextAsInt(td[9]))
 
 		records = append(records, record)
 	}
 
 	return records, nil
+}
+
+const (
+	// Turf, 1000 - 1300m
+	classTurfSprintMaiden   = "TS0"
+	classTurfSprintUntil3yo = "TS1"
+	classTurfSprint3yoAndUp = "TS2"
+	classTurfSprint         = "TS3"
+
+	// Turf, 1301 - 1899m
+	classTurfMileMaiden   = "TM0"
+	classTurfMileUntil3yo = "TM1"
+	classTurfMile3yoAndUp = "TM2"
+	classTurfMile         = "TM3"
+
+	// Turf, 1900 - 2100m
+	classTurfIntermediateMaiden   = "TI0"
+	classTurfIntermediateUntil3yo = "TI1"
+	classTurfIntermediate3yoAndUp = "TI2"
+	classTurfIntermediate         = "TI3"
+
+	// Turf, 2101 - 2700m
+	classTurfLongMaiden   = "TL0"
+	classTurfLongUntil3yo = "TL1"
+	classTurfLong3yoAndUp = "TL2"
+	classTurfLong         = "TL3"
+
+	// Turf, 2701m -
+	classTurfExtendedMaiden   = "TE0"
+	classTurfExtendedUntil3yo = "TE1"
+	classTurfExtended3yoAndUp = "TE2"
+	classTurfExtended         = "TE3"
+
+	// Dirt, 1000 - 1300m
+	classDirtSprintMaiden   = "DS0"
+	classDirtSprintUntil3yo = "DS1"
+	classDirtSprint3yoAndUp = "DS2"
+	classDirtSprint         = "DS3"
+
+	// Dirt, 1301 - 1899m
+	classDirtMileMaiden   = "DM0"
+	classDirtMileUntil3yo = "DM1"
+	classDirtMile3yoAndUp = "DM2"
+	classDirtMile         = "DM3"
+
+	// Dirt, 1900 - 2100m
+	classDirtIntermediateMaiden   = "DI0"
+	classDirtIntermediateUntil3yo = "DI1"
+	classDirtIntermediate3yoAndUp = "DI2"
+	classDirtIntermediate         = "DI3"
+
+	// Dirt, 2101 - 2700m
+	classDirtLongMaiden   = "DL0"
+	classDirtLongUntil3yo = "DL1"
+	classDirtLong3yoAndUp = "DL2"
+	classDirtLong         = "DL3"
+
+	// steeplechase
+	classSteeplechase ="S"
+)
+
+func determineClassificationCode(surface string, distance int, classification string) string {
+	if surface == "障" {
+		return classSteeplechase
+	}
+
+	if strings.Contains(classification, "オープン") ||
+		strings.Contains(classification, "1600") ||
+		strings.Contains(classification, "3勝") {
+		if surface == "芝" {
+			switch {
+			case distance <= 1300:
+				return classTurfSprint
+			case 1301 <= distance && distance <= 1899:
+				return classTurfMile
+			case 1900 <= distance && distance <= 2100:
+				return classTurfIntermediate
+			case 2101 <= distance && distance <= 2700:
+				return classTurfLong
+			default:
+				return classTurfExtended
+			}
+		} else {
+			switch {
+			case distance <= 1300:
+				return classDirtSprint
+			case 1301 <= distance && distance <= 1899:
+				return classDirtMile
+			case 1900 <= distance && distance <= 2100:
+				return classDirtIntermediate
+			default:
+				return classDirtLong
+			}
+		}
+	}
+
+	if strings.Contains(classification, "3歳以上") ||
+		strings.Contains(classification, "4歳以上") {
+		if surface == "芝" {
+			switch {
+			case distance <= 1300:
+				return classTurfSprint3yoAndUp
+			case 1301 <= distance && distance <= 1899:
+				return classTurfMile3yoAndUp
+			case 1900 <= distance && distance <= 2100:
+				return classTurfIntermediate3yoAndUp
+			case 2101 <= distance && distance <= 2700:
+				return classTurfLong3yoAndUp
+			default:
+				return classTurfExtended3yoAndUp
+			}
+		} else {
+			switch {
+			case distance <= 1300:
+				return classDirtSprint3yoAndUp
+			case 1301 <= distance && distance <= 1899:
+				return classDirtMile3yoAndUp
+			case 1900 <= distance && distance <= 2100:
+				return classDirtIntermediate3yoAndUp
+			default:
+				return classDirtLong3yoAndUp
+			}
+		}
+	}
+
+	if strings.Contains(classification, "新馬") ||
+		strings.Contains(classification, "未勝利") {
+		if surface == "芝" {
+			switch {
+			case distance <= 1300:
+				return classTurfSprintMaiden
+			case 1301 <= distance && distance <= 1899:
+				return classTurfMileMaiden
+			case 1900 <= distance && distance <= 2100:
+				return classTurfIntermediateMaiden
+			case 2101 <= distance && distance <= 2700:
+				return classTurfLongMaiden
+			default:
+				return classTurfExtendedMaiden
+			}
+		} else {
+			switch {
+			case distance <= 1300:
+				return classDirtSprintMaiden
+			case 1301 <= distance && distance <= 1899:
+				return classDirtMileMaiden
+			case 1900 <= distance && distance <= 2100:
+				return classDirtIntermediateMaiden
+			default:
+				return classDirtLongMaiden
+			}
+		}
+	}
+
+	if surface == "芝" {
+		switch {
+		case distance <= 1300:
+			return classTurfSprintUntil3yo
+		case 1301 <= distance && distance <= 1899:
+			return classTurfMileUntil3yo
+		case 1900 <= distance && distance <= 2100:
+			return classTurfIntermediateUntil3yo
+		case 2101 <= distance && distance <= 2700:
+			return classTurfLongUntil3yo
+		default:
+			return classTurfExtendedUntil3yo
+		}
+	} else {
+		switch {
+		case distance <= 1300:
+			return classDirtSprintUntil3yo
+		case 1301 <= distance && distance <= 1899:
+			return classDirtMileUntil3yo
+		case 1900 <= distance && distance <= 2100:
+			return classDirtIntermediateUntil3yo
+		default:
+			return classDirtLongUntil3yo
+		}
+	}
 }

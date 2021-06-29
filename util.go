@@ -67,6 +67,21 @@ func (u Util) parseFloat(s string) float64 {
 	return f
 }
 
+func (u Util) parseFinishTime(s string) float64 {
+	// s looks like "1:23.4"
+	ss := strings.Split(s, ":")
+
+	sec, _ := strconv.ParseFloat(ss[1], 64)
+
+	if ss[0] == "0" {
+		return sec
+	}
+
+	min, _ := strconv.ParseFloat(ss[0], 64)
+
+	return (min * 60.0) + sec
+}
+
 func (u Util) openDatabase(dbFilePath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbFilePath)
 	if err != nil {

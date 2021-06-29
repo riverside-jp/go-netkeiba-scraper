@@ -1,17 +1,18 @@
 CREATE TABLE IF NOT EXISTS `race` (
-    id             INTEGER PRIMARY KEY,
-    name           TEXT    NOT NULL,
-    course         TEXT    NOT NULL,
-    number         INTEGER NOT NULL,
-    surface        TEXT    NOT NULL,
-    direction      TEXT    NOT NULL,
-    distance       INTEGER NOT NULL,
-    weather        TEXT    NOT NULL,
-    surface_state  TEXT    NOT NULL,
-    surface_index  INTEGER,
-    date           TEXT    NOT NULL,
-    post_time      TEXT    NOT NULL,
-    classification TEXT    NOT NULL
+    id                  INTEGER PRIMARY KEY,
+    name                TEXT    NOT NULL,
+    course              TEXT    NOT NULL,
+    number              INTEGER NOT NULL,
+    surface             TEXT    NOT NULL,
+    direction           TEXT    NOT NULL,
+    distance            INTEGER NOT NULL,
+    weather             TEXT    NOT NULL,
+    surface_state       TEXT    NOT NULL,
+    surface_index       INTEGER,
+    date                TEXT    NOT NULL,
+    post_time           TEXT    NOT NULL,
+    classification      TEXT    NOT NULL,
+    classification_code TEXT    NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS date_idx    ON race(date);
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS `result` (
     weight             REAL     NOT NULL,
     jockey_id          TEXT     NOT NULL,
     jockey             TEXT     NOT NULL,
-    time               TEXT     NOT NULL,
+    time               TEXT,
+    time_sec           INTEGER,
     winning_margin     TEXT     NOT NULL,
     speed_index        INTEGER,
     position           TEXT     NOT NULL,

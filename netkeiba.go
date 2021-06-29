@@ -347,6 +347,11 @@ func buildRaceRecord(id int, doc *html.Node) (*race, error) {
 	if span, err := htmlquery.Query(raceData, "//span"); err == nil {
 		s := util.htmlInnerTextAndSplit(span, "/")
 
+		// workaround for Stayers Stakes
+		if strings.Contains(s[0], " 内2周") {
+			s[0] = strings.Replace(s[0], " 内2周", "", -1)
+		}
+
 		r1 := regexp.MustCompile(`([^\d]+)([\d]+)m`)
 		m1 := r1.FindAllStringSubmatch(s[0], -1)
 

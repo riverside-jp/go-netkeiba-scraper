@@ -539,7 +539,7 @@ const (
 	classDirtLong         = "DL3"
 
 	// steeplechase
-	classSteeplechase ="S"
+	classSteeplechase = "S"
 )
 
 func determineClassificationCode(surface string, distance int, classification string) string {

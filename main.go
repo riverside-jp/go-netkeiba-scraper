@@ -54,11 +54,11 @@ func main() {
 				Action: cmdCollect,
 			},
 			{
-				Name:   "dump",
-				Usage:  "Dump past races data from netkeiba.com",
+				Name:  "dump",
+				Usage: "Dump past races data from netkeiba.com",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "data-type",
+						Name:    "data-type",
 						Aliases: []string{"d"},
 						Usage:   "Specify the type of data to be collected (Default: race and result data)",
 					},

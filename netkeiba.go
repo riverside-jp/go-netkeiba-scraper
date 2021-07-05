@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -660,6 +661,343 @@ func determineClassificationCode(surface string, distance int, classification st
 			return classDirtLongUntil3yo
 		}
 	}
+}
+
+// e.g.
+// (a) Deep Impact
+// |– (b1) Sunday Silence
+// |   |– (c1) Halo
+// |   | |- (d1) Hail to Reason
+// |   | | |- (e1) Turn-to
+// |   | | | |- (f1) Royal Charger
+// |   | | | `– (f2) Source Sucree
+// |   | | `– (e2) Nothirdchance
+// |   | |   |- (f3) Blue Swords
+// |   | |   `– (f4) Galla Colors
+// |   | `– (d2) Cosmah
+// |   |   |- (e3) Cosmic Bomb
+// |   |   | |- (f5) Pharamond
+// |   |   | `– (f6) Banish Fear
+// |   |   `– (e4) Almahmoud
+// |   |     |- (f7) Mahmoud
+// |   |     `– (f8) Arbitrator
+// |   `– (c2) Wishing Well
+// |     |- (d3) Understanding
+// |     | |– (e5) Promised Land
+// |     | | |- (f9) Palestinian
+// |     | | `– (f10) Mahmoudess
+// |     | `– (e6) Pretty Ways
+// |     |   |- (f11) Stymie
+// |     |   `– (f12) Pretty Jo
+// |     `– (d4) Mountain Flower
+// |       |- (e7) Montparnasse
+// |       | |- (f13) Gulf Stream
+// |       | `– (f14) Mignon
+// |       `– (e8) Edelweiss
+// |         |- (f15) Hillary
+// |         `– (f16) Dowager
+// |
+// `– (b2) Wind in Her Hair
+//     |– (c3) Alzao
+//     | |- (d5) Lyphard
+//     | | |- (e9) Northern Dancer
+//     | | | |- (f17) Nearctic
+//     | | | `– (f18) Natalma
+//     | | `– (e10) Goofed
+//     | |   |- (f19) Court Martial
+//     | |   `– (f20) Barra
+//     | `– (d6)Lady Rebecca
+//     |   |- (e11) Sir Ivor
+//     |   | |- (f21) Sir Gaylord
+//     |   | `– (f22) Attica
+//     |   `– (e12) Pocahontas
+//     |     |- (f23) Roman
+//     |     `– (f24) Arbitrator
+//     `– (c4) Burghclere
+//       |- (d7) Busted
+//       | |– (e13) Crepello
+//       | | |- (f25) Donatello
+//       | | `– (f26) Crepuscule
+//       | `– (e14) Sans le Sou
+//       |   |- (f27) ヴィミー
+//       |   `– (f28) Martial Loan
+//       `– (d8) Highclere
+//         |- (e15) Queen's Hussar
+//         | |- (f29) March Past
+//         | `– (f30) Jojo
+//         `– (e16) Highlight
+//           |- (f31) Borealis
+//           `– (f32) Hypericum
+func importHorseData(db *sql.DB, filePath string) error {
+	id := strings.TrimSuffix(filepath.Base(filePath), ".html")
+
+	doc, err := htmlquery.LoadDoc(filePath)
+	if err != nil {
+		return err
+	}
+
+	records, err := buildHorseRecords(id, doc)
+	if err != nil {
+		return err
+	}
+
+	n := len(records)
+	values, args := make([]string, n), make([]interface{}, n*4)
+
+	pos := 0
+	for i := 0; i < n; i++ {
+		values[i] = "(?, ?, ?, ?)"
+		args[pos] = records[i].id
+		args[pos+1] = records[i].name
+		args[pos+2] = records[i].sireID
+		args[pos+3] = records[i].damID
+		pos += 4
+	}
+
+	query := fmt.Sprintf("INSERT OR REPLACE INTO horse VALUES %s", strings.Join(values, ", "))
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	if _, err = stmt.Exec(args...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func buildHorseRecords(id string, doc *html.Node) ([]*horse, error) {
+	tr := htmlquery.QuerySelectorAll(doc, xpath.MustCompile(`//table[`+util.xpathContains("@class", "blood_table")+`]/tbody/tr`))
+	if len(tr) != 32 {
+		return nil, xerrors.Errorf(`<tr> 要素の数が 32 ではない（horse_id: %s）: %d`, id, len(tr))
+	}
+
+	f1 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[5]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[5]/a[1]/span|/td[5]/a[1]`)))}
+	f2 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[1], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[1], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f3 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[2], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[2], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f4 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[3], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[3], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f5 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	f6 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[5], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[5], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f7 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[6], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[6], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f8 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[7], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[7], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f9 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[4]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[4]/a[1]/span|/td[4]/a[1]`)))}
+	f10 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[9], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[9], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f11 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[10], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[10], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f12 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[11], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[11], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f13 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	f14 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[13], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[13], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f15 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[14], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[14], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f16 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[15], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[15], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+
+	e1 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[4]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[4]/a[1]/span|/td[4]/a[1]`)))}
+	e1.sireID.Scan(f1.id)
+	e1.damID.Scan(f2.id)
+
+	e2 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[2], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[2], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e2.sireID.Scan(f3.id)
+	e2.damID.Scan(f4.id)
+
+	e3 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	e3.sireID.Scan(f5.id)
+	e3.damID.Scan(f6.id)
+
+	e4 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[6], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[6], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e4.sireID.Scan(f7.id)
+	e4.damID.Scan(f8.id)
+
+	e5 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	e5.sireID.Scan(f9.id)
+	e5.damID.Scan(f10.id)
+
+	e6 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[10], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[10], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e6.sireID.Scan(f11.id)
+	e6.damID.Scan(f12.id)
+
+	e7 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	e7.sireID.Scan(f13.id)
+	e7.damID.Scan(f14.id)
+
+	e8 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[14], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[14], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e8.sireID.Scan(f15.id)
+	e8.damID.Scan(f16.id)
+
+	d1 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	d1.sireID.Scan(e1.id)
+	d1.damID.Scan(e2.id)
+
+	d2 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[4], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	d2.sireID.Scan(e3.id)
+	d2.damID.Scan(e4.id)
+
+	d3 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	d3.sireID.Scan(e5.id)
+	d3.damID.Scan(e6.id)
+
+	d4 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[12], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	d4.sireID.Scan(e7.id)
+	d4.damID.Scan(e8.id)
+
+	c1 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	c1.sireID.Scan(d1.id)
+	c1.damID.Scan(d2.id)
+
+	c2 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[8], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	c2.sireID.Scan(d3.id)
+	c2.damID.Scan(d4.id)
+
+	b1 := &horse{id: util.htmlSelectHrefLastSegment(tr[0]), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[0], xpath.MustCompile(`/td[1]/a[1]`)))}
+	b1.sireID.Scan(c1.id)
+	b1.damID.Scan(c2.id)
+
+	f17 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[5]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[5]/a[1]/span|/td[5]/a[1]`)))}
+	f18 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[17], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[17], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f19 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[18], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[18], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f20 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[19], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[19], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f21 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	f22 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[21], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[21], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f23 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[22], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[22], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f24 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[23], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[23], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f25 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[4]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[4]/a[1]/span|/td[4]/a[1]`)))}
+	f26 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[25], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[25], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f27 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[26], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[26], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f28 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[27], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[27], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f29 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	f30 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[29], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[29], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	f31 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[30], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[30], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	f32 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[31], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[31], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+
+	e9 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[4]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[4]/a[1]/span|/td[4]/a[1]`)))}
+	e9.sireID.Scan(f17.id)
+	e9.damID.Scan(f18.id)
+
+	e10 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[18], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[18], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e10.sireID.Scan(f19.id)
+	e10.damID.Scan(f20.id)
+
+	e11 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	e11.sireID.Scan(f21.id)
+	e11.damID.Scan(f22.id)
+
+	e12 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[22], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[22], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e12.sireID.Scan(f23.id)
+	e12.damID.Scan(f24.id)
+
+	e13 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	e13.sireID.Scan(f25.id)
+	e13.damID.Scan(f26.id)
+
+	e14 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[26], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[26], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e14.sireID.Scan(f27.id)
+	e14.damID.Scan(f28.id)
+
+	e15 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	e15.sireID.Scan(f29.id)
+	e15.damID.Scan(f30.id)
+
+	e16 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[30], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[30], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	e16.sireID.Scan(f31.id)
+	e16.damID.Scan(f32.id)
+
+	d5 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[3]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[3]/a[1]/span|/td[3]/a[1]`)))}
+	d5.sireID.Scan(e9.id)
+	d5.damID.Scan(e10.id)
+
+	d6 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[20], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	d6.sireID.Scan(e11.id)
+	d6.damID.Scan(e12.id)
+
+	d7 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	d7.sireID.Scan(e13.id)
+	d7.damID.Scan(e14.id)
+
+	d8 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[28], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	d8.sireID.Scan(e15.id)
+	d8.damID.Scan(e16.id)
+
+	c3 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[2]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[2]/a[1]/span|/td[2]/a[1]`)))}
+	c3.sireID.Scan(d5.id)
+	c3.damID.Scan(d6.id)
+
+	c4 := &horse{id: util.htmlSelectHrefLastSegment(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[1]/a[1]`))), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[24], xpath.MustCompile(`/td[1]/a[1]/span|/td[1]/a[1]`)))}
+	c4.sireID.Scan(d7.id)
+	c4.damID.Scan(d8.id)
+
+	b2 := &horse{id: util.htmlSelectHrefLastSegment(tr[16]), name: util.htmlInnerTextFirstLine(htmlquery.QuerySelector(tr[16], xpath.MustCompile(`/td[1]/a[1]`)))}
+	b2.sireID.Scan(c3.id)
+	b2.damID.Scan(c4.id)
+	name := htmlquery.InnerText(htmlquery.QuerySelector(doc, xpath.MustCompile(`//div[`+util.xpathContains("@class", "horse_title")+`]/h1`)))
+
+	a := &horse{id: id, name: strings.TrimSpace(name)}
+	a.sireID.Scan(b1.id)
+	a.damID.Scan(b2.id)
+
+	return []*horse{
+		a,
+		b1,
+		b2,
+		c1,
+		c2,
+		c3,
+		c4,
+		d1,
+		d2,
+		d3,
+		d4,
+		d5,
+		d6,
+		d7,
+		d8,
+		e1,
+		e2,
+		e3,
+		e4,
+		e5,
+		e6,
+		e7,
+		e8,
+		e9,
+		e10,
+		e11,
+		e12,
+		e13,
+		e14,
+		e15,
+		e16,
+		f1,
+		f2,
+		f3,
+		f4,
+		f5,
+		f6,
+		f7,
+		f8,
+		f9,
+		f10,
+		f11,
+		f12,
+		f13,
+		f14,
+		f15,
+		f16,
+		f17,
+		f18,
+		f19,
+		f20,
+		f21,
+		f22,
+		f23,
+		f24,
+		f25,
+		f26,
+		f27,
+		f28,
+		f29,
+		f30,
+		f31,
+		f32,
+	}, nil
 }
 
 type horse struct {

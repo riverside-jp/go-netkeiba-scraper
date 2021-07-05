@@ -27,13 +27,26 @@ func cmdImport(c *cli.Context) error {
 
 	files, err := filepath.Glob(filepath.Join(config.Path.DataDir, "*.html"))
 	if err != nil {
-		return xerrors.Errorf("Failed to glob HTML files: %+v", err)
+		return xerrors.Errorf("Failed to glob HTML files: %+w", err)
 	}
 
-	log.Printf("Importing %d data ...\n", len(files))
+	log.Printf("Importing %d race data ...\n", len(files))
 
 	for i := 0; i < len(files); i++ {
 		if err := importRaceData(db, files[i]); err != nil {
+			log.Printf("Failed to import %s: %s\n", files[i], err)
+		}
+	}
+
+	files, err = filepath.Glob(filepath.Join(config.Path.DataDir, "horse", "*.html"))
+	if err != nil {
+		return xerrors.Errorf("Failed to glob HTML files: %+w", err)
+	}
+
+	log.Printf("Importing %d horse data ...\n", len(files))
+
+	for i := 0; i < len(files); i++ {
+		if err := importHorseData(db, files[i]); err != nil {
 			log.Printf("Failed to import %s: %s\n", files[i], err)
 		}
 	}

@@ -75,7 +75,7 @@ func dumpHorseData() error {
 			return err
 		}
 
-		url := config.Netkeiba.DatabaseURL + "/horse/" + horseID
+		url := config.Netkeiba.DatabaseURL + "/horse/ped/" + horseID
 
 		if err := dumpWebPageAsHTMLFile(path, url); err != nil {
 			log.Printf("Failed to dump %s: %+v", url, err)

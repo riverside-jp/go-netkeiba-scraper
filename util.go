@@ -32,7 +32,12 @@ func (u Util) htmlInnerTextAsFloat(n *html.Node) float64 {
 }
 
 func (u Util) htmlAnchorHref(n *html.Node) string {
-	return htmlquery.SelectAttr(htmlquery.QuerySelector(n, xpath.MustCompile(`//a`)), "href")
+	if n != nil {
+		if a := htmlquery.QuerySelector(n, xpath.MustCompile(`//a`)); a != nil {
+			return htmlquery.SelectAttr(a, "href")
+		}
+	}
+	return ""
 }
 
 func (u Util) htmlSelectHrefLastSegment(n *html.Node) string {
@@ -48,6 +53,22 @@ func (u Util) htmlSelectHrefLastSegment(n *html.Node) string {
 
 func (u Util) htmlInnerTextAndSplit(n *html.Node, sep string) []string {
 	return strings.Split(u.htmlInnerText(n), sep)
+}
+
+func (u Util) htmlInnerTextFirstLine(n *html.Node) string {
+	if n != nil {
+		if v := u.htmlSplitLineBreak(n); 0 < len(v) {
+			return strings.TrimSpace(v[0])
+		}
+	}
+	return ""
+}
+
+func (u Util) htmlInnerTextFirstRow(n *html.Node) string {
+	if v := u.htmlInnerTextAndSplit(n, " "); 0 < len(v) {
+		return strings.TrimSpace(v[0])
+	}
+	return ""
 }
 
 func (u Util) htmlSplitLineBreak(n *html.Node) []string {

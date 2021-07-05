@@ -661,3 +661,10 @@ func determineClassificationCode(surface string, distance int, classification st
 		}
 	}
 }
+
+type horse struct {
+	id     string
+	name   string
+	sireID sql.NullString
+	damID  sql.NullString
+}

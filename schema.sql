@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS `payout` (
 CREATE TABLE IF NOT EXISTS `horse` (
     id      TEXT    NOT NULL,
     name    TEXT    NOT NULL,
-    born    INTEGER NOT NULL,
     sire_id TEXT,
     dam_id  TEXT,
     PRIMARY KEY (id)
